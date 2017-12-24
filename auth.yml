@@ -1,0 +1,75 @@
+# auth
+
+version: "3"
+
+services:
+
+  mysql:
+    image: mysql:5
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: ${AUTH_MYSQL_PASSWORD}
+    volumes:
+      - authdb:/var/lib/mysql
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 1G
+
+  # pma:
+  #   image: phpmyadmin/phpmyadmin
+  #   ports:
+  #     - "5555:80"
+  #   environment:
+  #     PMA_HOST: mysql
+
+  keycloak:
+    image: felicityiiith/keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: ${AUTH_KEYCLOAK_PASSWORD}
+      MYSQL_DATABASE: keycloak
+      MYSQL_USER: keycloak
+      MYSQL_PASSWORD: ${AUTH_MYSQL_PASSWORD}
+      MYSQL_PORT_3306_TCP_ADDR: mysql
+      MYSQL_PORT_3306_TCP_PORT: 3306
+      PROXY_ADDRESS_FORWARDING: 'true'
+    deploy:
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 1G
+    depends_on:
+      - mysql
+      - ldap
+
+  ldap:
+    image: osixia/openldap:1.1.11
+    # ports:
+    #   - "389:389"
+    environment:
+      LDAP_ORGANISATION: Felicity
+      LDAP_DOMAIN: felicity.iiit.ac.in
+      LDAP_ADMIN_PASSWORD: ${AUTH_LDAP_PASSWORD}
+    volumes:
+      - ldapdata:/var/lib/ldap
+      - ldapconf:/etc/ldap/slapd.conf
+    deploy:
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 100M
+
+volumes:
+  authdb:
+  ldapdata:
+  ldapconf:
