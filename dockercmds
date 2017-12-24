@@ -1,0 +1,36 @@
+# main mariadb
+docker run --name main-mariadb -e MYSQL_ROOT_PASSWORD=password -d mariadb:10.1.14
+docker run --name main-myadmin -d --link main-mariadb:db -p 4444:80 phpmyadmin/phpmyadmin
+
+# keycload db
+docker run --name keycloak-mysql -e MYSQL_DATABASE=keycloak -e MYSQL_USER=keycloak -e MYSQL_PASSWORD=password -e MYSQL_ROOT_PASSWORD=root_password -d mysql
+docker run --name keycloak-myadmin -d --link keycloak-mysql:db -p 5555:80 phpmyadmin/phpmyadmin
+
+# LDAP
+docker run -d -p 389:389 --name ldap --env LDAP_ORGANISATION="Felicity" --env LDAP_DOMAIN="felicity.iiit.ac.in" --env LDAP_ADMIN_PASSWORD="abcd" --detach osixia/openldap:1.1.11
+docker run -d -p 6443:443 --name phpldapadmin --link ldap:ldap-host --env PHPLDAPADMIN_LDAP_HOSTS=ldap-host --detach osixia/phpldapadmin:0.7.1
+
+docker run -d -p 8080:8080 -p 9990:9990 --name keycloak --link keycloak-mysql:mysql --link ldap:ldap -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=password jboss/keycloak
+
+
+docker run -d -p 390:389 --name origldap --env LDAP_ORGANISATION="Felicity" --env LDAP_DOMAIN="felicity.iiit.ac.in" --env LDAP_ADMIN_PASSWORD="abcd" --detach osixia/openldap:1.1.11
+docker run -d -p 7443:443 --name origphpldapadmin --link origldap:ldap-host --env PHPLDAPADMIN_LDAP_HOSTS=ldap-host --detach osixia/phpldapadmin:0.7.1
+
+
+docker start main-mariadb main-myadmin keycloak-mysql keycloak-myadmin ldap phpldapadmin origldap origphpldapadmin keycloak
+
+
+# Kong
+docker run -d --name kong-database -e "POSTGRES_USER=kong" -e "POSTGRES_DB=kong" postgres:9.4
+docker run --rm --link kong-database:kong-database -e "KONG_DATABASE=postgres" -e "KONG_PG_HOST=kong-database" kong kong migrations up
+docker run -d --name kong --link kong-database:kong-database --link keycloak:keycloak -e "KONG_DATABASE=postgres" -e "KONG_PG_HOST=kong-database" -p 8000:8000 -p 8443:8443 -p 8001:8001 -p 8444:8444 kong
+docker exec kong yum install -y git unzip
+docker exec kong luarocks install kong-oidc
+docker exec -e KONG_CUSTOM_PLUGINS=oidc kong kong reload
+
+docker container stop kong kong-database
+docker container rm kong kong-database
+
+docker run --name akeycloak-mysql -e MYSQL_DATABASE=keycloak -e MYSQL_USER=keycloak -e MYSQL_PASSWORD=password -e MYSQL_ROOT_PASSWORD=root_password -d mysql
+docker run --name akeycloak-myadmin -d --link akeycloak-mysql:db -p 5555:80 phpmyadmin/phpmyadmin
+docker run -d -p 8080:8080 --name akeycloak --link akeycloak-mysql:mysql -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=password jboss/keycloak
