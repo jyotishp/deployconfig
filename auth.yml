@@ -19,6 +19,22 @@ services:
           cpus: "0.25"
           memory: 1G
 
+  mysqldump:
+    image: bigtruedata/mysqldump:3.3
+    environment:
+      MYSQLDUMP_OPTIONS: --host mysql --user keycloak --password ${AUTH_MYSQL_PASSWORD}
+      DATABASE_NAME: keycloak
+      TIME_ZONE: Asia/Kolkata
+    volumes:
+      - authdbdump:/dump
+    deploy:
+      restart_policy:
+        condition: any
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 100M
+
   # pma:
   #   image: phpmyadmin/phpmyadmin
   #   ports:
@@ -73,3 +89,4 @@ volumes:
   authdb:
   ldapdata:
   ldapconf:
+  authdbdump:
