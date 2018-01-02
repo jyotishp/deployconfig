@@ -51,16 +51,16 @@ services:
       - ldap
 
   ldap:
-    image: osixia/openldap:1.1.11
+    image: dinkel/openldap
     # ports:
     #   - "389:389"
     environment:
-      LDAP_ORGANISATION: Felicity
-      LDAP_DOMAIN: felicity.iiit.ac.in
-      LDAP_ADMIN_PASSWORD: ${AUTH_LDAP_PASSWORD}
+      SLAPD_ORGANISATION: Felicity
+      SLAPD_DOMAIN: felicity.iiit.ac.in
+      SLAPD_PASSWORD: ${AUTH_LDAP_PASSWORD}
     volumes:
+      - ldapconf:/etc/ldap/
       - ldapdata:/var/lib/ldap
-      - ldapconf:/etc/ldap/slapd.conf
     deploy:
       restart_policy:
         condition: any
